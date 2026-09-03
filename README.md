@@ -78,8 +78,8 @@ the result so it never asks again after that.
   API/loader, Mixin, ViaVersion, and a compile-only MCEF stub (more on that below), plus
   the rest of the classpath.
 - `resources/` — the stuff that has to end up inside the jar for it to work as a mod at
-  all: `fabric.mod.json`, the mixin config + refmap, the manifest (which tells Fabric
-  Loader to remap the mod's intermediary names at load time), ten jar-in-jar runtime
+  all: `fabric.mod.json`, the mixin config + refmap, the manifest that tells Fabric
+  Loader to remap the mod's intermediary names at load time, ten jar-in-jar runtime
   dependencies, and the assets — textures, fonts, shaders, native libs.
 - `build.py` / `build.bat` — the build script. Doesn't reach outside this folder for
   anything.
@@ -94,19 +94,20 @@ browser won't render anything until MCEF itself catches up to this Minecraft ver
 
 Thirteen of Wild's mixin classes extend their own `@Mixin` target — a real, intentional
 Mixin pattern used to get typed access to protected members. Normally Mixin's annotation
-processor rewrites that superclass to `java.lang.Object` at compile time, but this build
-runs with `-proc:none` (no annotation processing), so it never happens automatically.
-`patch_mixin_super.py` does that same rewrite directly on the compiled `.class` files
-after the fact. Skip it and Mixin's runtime transformer refuses to load those 13 classes
-at all — which, since half of Wild's UI depends on them, means no click-gui menu.
+processor rewrites that superclass to `java.lang.Object` at compile time. This build
+skips annotation processing entirely, so that rewrite never happens on its own.
+`patch_mixin_super.py` does the same rewrite directly on the compiled `.class` files
+after the fact. Skip that step and Mixin's runtime transformer refuses to load those 13
+classes, and a lot of Wild's UI — including the click-gui menu — depends on them.
 
 The Discord verification thing (`DiscordAuthManager`) isn't something that was recovered
 from anywhere — it got added during this reconstruction. On first launch it opens a
-Discord OAuth2 page in your browser (implicit grant, so no client secret has to live in
-the jar), waits for you to approve it, pulls your username and avatar back through a
-local callback server, caches both, and uses them in the client's diagnostics panel. It
-also opens an invite to a specific Discord server as part of that same flow. None of this
-is optional — if you don't finish it, the game closes instead of continuing unverified.
+Discord OAuth2 page in your browser using the implicit grant flow, so there's no client
+secret sitting in the jar for anyone to pull out. It waits for you to approve, pulls your
+username and avatar back through a local callback server, caches both, and uses them in
+the client's diagnostics panel. It also opens an invite to a specific Discord server as
+part of that same flow. None of this is optional — if you don't finish it, the game
+closes instead of continuing unverified.
 If you're forking this for yourself, you'll need to swap in your own Discord Application
 Client ID (`DiscordAuthManager.java`, the `CLIENT_ID` constant) and register
 `http://localhost:47113/callback` as a redirect URI in Discord's developer portal, or
