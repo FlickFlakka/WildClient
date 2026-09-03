@@ -70,15 +70,15 @@ result so it never asks again after that.
 
 ## What's in here
 
-- `src/` — the 873 `.java` files, packages intact.
-- `lib/` — everything needed to compile: the Minecraft 1.21.8 intermediary jar, Fabric
+- `src/`: the 873 `.java` files, packages intact.
+- `lib/`: everything needed to compile: the Minecraft 1.21.8 intermediary jar, Fabric
   API/loader, Mixin, ViaVersion, a compile-only MCEF stub, and the rest of the classpath.
-- `resources/` — the stuff that has to end up inside the jar for it to work as a mod at
+- `resources/`: the stuff that has to end up inside the jar for it to work as a mod at
   all: `fabric.mod.json`, the mixin config and refmap, the manifest that tells Fabric
   Loader to remap the mod's intermediary names at load time, ten jar-in-jar runtime
   dependencies, and the assets: textures, fonts, shaders, native libs.
-- `build.py` / `build.bat` — the build script. Doesn't reach outside this folder.
-- `patch_mixin_super.py` — a post-compile bytecode patch, explained below.
+- `build.py` / `build.bat`: the build script. Doesn't reach outside this folder.
+- `patch_mixin_super.py`: a post-compile bytecode patch, explained below.
 
 ## Things worth knowing before you go digging
 
