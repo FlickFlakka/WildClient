@@ -1,130 +1,124 @@
 # Wild — reconstructed client source
 
-This is a working, buildable source reconstruction of **Wild**, a Fabric client mod for
-Minecraft 1.21.8. It was rebuilt from decompiled, obfuscated bytecode — there is no
-original human-written source available, so this repo *is* the closest thing to it that
-exists. It compiles cleanly, packages into a real Fabric mod jar, and runs.
+Wild is a Fabric client mod for Minecraft 1.21.8. This repo is a working reconstruction
+of its source, rebuilt from the obfuscated bytecode it shipped as — there's no original
+human-written source floating around anywhere, so this is about as close as it gets. It
+compiles, packages into a real mod jar, and runs.
 
-## What this actually is
+## Backstory
 
-The shipped Wild jar was obfuscated (ProGuard-style) before distribution — every
-field/method/local name was stripped and replaced with short garbage strings like
-`UuUVuuUu`, `C00OOC00oO`. This repo started as a CFR decompilation of that obfuscated
-bytecode, which reconstructs valid Java *structure* but can't recover the *original
-names* — those were destroyed before decompilation ever happened.
+Whatever build system Wild's devs used ran everything through an obfuscator before
+shipping, so every field, method, and local variable name in the compiled jar got
+replaced with garbage like `UuUVuuUu` or `C00OOC00oO`. This repo started life as a CFR
+decompile of that bytecode. CFR can rebuild the structure of the code fine, but it has no
+way to recover names that were already destroyed before decompilation even happened.
 
-From there, this repo went through several passes to make it into something usable:
+Getting from "decompiled bytecode" to "thing you can actually build and run" took a few
+passes:
 
-1. **Made it compile.** The raw decompiled output had ~50+ recurring decompiler bugs
-   (definite-assignment errors from CFR's ternary/switch handling, self-reference-before-
-   assignment bugs, mangled try-with-resources blocks, dead static initializers, etc.)
-   across dozens of files. All fixed with zero behavioral changes. Two files
-   (`BrowserOverlayRenderer`, `AutoBuyModule`) needed real fixes rather than mechanical
-   ones — see Notes below for the MCEF situation.
-2. **Made it a real Fabric mod**, not just compiled `.class` files. Pulled in
-   `fabric.mod.json`, the Mixin config + refmap, the `META-INF` manifest/nested jars, and
-   all runtime assets (`resources/`), and fixed a stale entrypoint reference and a mixin
-   compile flag issue that meant nothing in the client ever actually ran at load time
-   (see Notes).
-3. **Renamed ~253 recurring obfuscated identifiers** (`UuUVuuUu`, `C00OOC00oO`, and
-   everything like them) to plain, distinct, readable names across all 873 files —
-   roughly 133,500 individual renames. This was done as a whole-codebase, string/comment-
-   aware, scope-safe token substitution (Java resolves identifiers lexically, so a
-   *consistent* global rename can't break compilation) rather than by hand.
-4. **Added a first-launch Discord verification flow** (`DiscordAuthManager`) as a
-   requested feature — see Notes.
+- Fixing the decompiler's own output. CFR's raw dump had a few dozen recurring bugs —
+  ternary/switch definite-assignment issues, self-reference-before-assignment bugs,
+  mangled try-with-resources, dead static initializers, that kind of thing — spread
+  across a lot of files. All fixed without changing behavior. Two files needed something
+  closer to a real fix than a mechanical one (`BrowserOverlayRenderer` and
+  `AutoBuyModule` — see the notes below on MCEF).
+- Turning the compiled classes into an actual loadable mod. This meant pulling in
+  `fabric.mod.json`, the mixin config and refmap, the manifest and nested jars, and all
+  the runtime assets, plus fixing a stale entrypoint reference and a mixin compile issue
+  — without those the mod jar just sat there doing nothing at runtime.
+- Renaming the obfuscated identifiers. About 253 distinct garbage tokens, roughly 133,500
+  occurrences total, swapped out for plain readable names across all 873 files. Done as
+  one big scope-safe substitution rather than by hand — see the section below on what
+  that does and doesn't get you.
+- Bolting on a first-launch Discord verification step, which wasn't part of the original
+  and is described further down.
 
-## Important: what "readable" means here
+## About the renamed identifiers
 
-The renamed identifiers are **not semantically accurate** — the original names are gone
-for good, so there was no way to recover what a given field or method was *actually*
-supposed to be called. What you get instead is: every occurrence of the same gibberish
-token now reads as the same plain, distinct word (e.g. `UuUVuuUu` → `primaryVal`
-everywhere), so the code no longer looks like line noise and different concepts are at
-least visually distinguishable from each other — but a name like `primaryVal` doesn't
-tell you what it does beyond what the surrounding code shows you. Treat this as "no
-longer obfuscated garbage," not "cleanly documented."
+Don't mistake "readable" for "documented." The original names are gone for good, so
+there was no way to figure out what a given field or method was actually supposed to be
+called — nobody kept a symbol table around for a ProGuard'd jar. What actually happened
+is every occurrence of a given garbage token got mapped to the same plain word
+everywhere (`UuUVuuUu` became `primaryVal` wherever it showed up), so the code stops
+looking like line noise and different things at least look different from each other.
+That's it. `primaryVal` doesn't tell you what it does beyond what you can already see in
+the surrounding code — it's just no longer actively hostile to read.
 
-## Build
+## Building it
 
-Requirements: JDK 21+ (`javac` on PATH, or `JAVA_HOME` set). Nothing else — every
-third-party/Minecraft/Fabric/Mixin jar this needs is vendored in `lib/` (302 jars, ~190
-MB), so the build has no dependency on any local Minecraft/Gradle install.
+You need a JDK 21+ (`javac` on PATH, or `JAVA_HOME` pointing at one). That's the only
+thing you need — every Minecraft/Fabric/Mixin/third-party jar this depends on is already
+sitting in `lib/` (302 of them), so the build doesn't touch your local Minecraft
+install or Gradle cache at all.
 
 ```
-python build.py            # compiles to build/classes and packages build/wild.jar
-python build.py noJar      # compile only, skip the jar
+python build.py            # compiles to build/classes, packages build/wild.jar
+python build.py noJar      # compile only
 ```
 
-or on Windows, double-click / run `build.bat`.
+or just run `build.bat` if you're on Windows and don't want to type anything.
 
-`build.py` also runs `patch_mixin_super.py` automatically after every compile — see
-Notes for why that's necessary.
+`build.py` runs `patch_mixin_super.py` on the compiled classes right after compiling —
+that step isn't optional, see the notes below for why.
 
-## Installing / running
+## Running it
 
-`build/wild.jar` is a real Fabric mod — copy it into `.minecraft/mods/`. Requires Fabric
-Loader ≥0.18.4 and Fabric API on Minecraft 1.21.8. It does nothing run standalone
-(`java -jar wild.jar`) — it only runs loaded inside a Fabric-modded client.
+Drop `build/wild.jar` into `.minecraft/mods/`. You'll need Fabric Loader 0.18.4+ and
+Fabric API for 1.21.8. It won't do anything if you try to run the jar directly — it only
+does anything loaded inside an actual modded client.
 
-**First launch requires a one-time Discord verification** (see Notes) before the client
-becomes usable — the game will pop a dialog with a login URL and wait up to 5 minutes for
-it to complete, then never asks again.
+First time you launch it, you'll get a Discord verification prompt before anything else
+works — a dialog with a login link pops up, you approve it in the browser, and it caches
+the result so it never asks again after that.
 
-## Layout
+## What's in here
 
-- `src/` — all 873 `.java` sources, package layout intact (`org/`, `ru/metaculture/...`,
-  `dev/`, ...).
-- `lib/` — vendored compile-time dependencies (Minecraft 1.21.8 intermediary jar, Fabric
-  API + loader, Mixin/SpongePowered, ViaVersion, an MCEF compile-only stub since no
-  official MCEF build targets 1.21.8, and the rest of the classpath).
-- `resources/` — everything the compiled classes need to actually run as a Fabric mod,
-  bundled into `build/wild.jar` alongside the `.class` files:
-  - `fabric.mod.json` — mod manifest (id, entrypoint, mixin config, depends).
-  - `wild_mixins.json` + `Wild-refmap.json` — the Mixin config and refmap. This is how
-    Wild hooks into Minecraft's render/input/tick loop, including the click-gui.
-  - `META-INF/MANIFEST.MF` — declares `Fabric-Mapping-Namespace: intermediary` so
-    Fabric Loader remaps the mod's `class_XXXX`/`method_XXXX` calls at load time.
-  - `META-INF/jars/*.jar` — 10 runtime dependencies loaded via Fabric's jar-in-jar
-    mechanism (baritone, Java-WebSocket, javassist, jlayer/mp3spi/tritonus for audio,
-    json, netty extras, reflections).
-  - `assets/` — textures, fonts, shaders for the click-gui/HUD, plus native libs.
-- `build.py` / `build.bat` — self-contained build script; nothing outside this folder is
-  referenced.
-- `patch_mixin_super.py` — post-compile bytecode patch, see Notes.
+- `src/` — the 873 `.java` files, packages intact.
+- `lib/` — everything needed to compile: the Minecraft 1.21.8 intermediary jar, Fabric
+  API/loader, Mixin, ViaVersion, and a compile-only MCEF stub (more on that below), plus
+  the rest of the classpath.
+- `resources/` — the stuff that has to end up inside the jar for it to work as a mod at
+  all: `fabric.mod.json`, the mixin config + refmap, the manifest (which tells Fabric
+  Loader to remap the mod's intermediary names at load time), ten jar-in-jar runtime
+  dependencies, and the assets — textures, fonts, shaders, native libs.
+- `build.py` / `build.bat` — the build script. Doesn't reach outside this folder for
+  anything.
+- `patch_mixin_super.py` — a post-compile bytecode patch, explained below.
 
-## Notes / known issues
+## Things worth knowing before you go digging
 
-- **MCEF (in-game browser) is a stub.** No official MCEF build exists for Minecraft
-  1.21.8, so `lib/` contains a compile-only stub covering just the API surface Wild
-  calls. `BrowserOverlayRenderer` compiles and loads fine, but the actual embedded
-  browser won't render anything until a real MCEF 1.21.8 build exists upstream.
-- **Mixin superclass bytecode patch is required.** 13 of Wild's mixin classes use a real,
-  documented Mixin pattern — extending their own `@Mixin` target for typed access to
-  protected members. Normally SpongePowered Mixin's annotation processor rewrites that to
-  `java.lang.Object` at compile time; this build compiles with `-proc:none` (no
-  annotation processing), so `patch_mixin_super.py` does that exact rewrite directly on
-  the compiled `.class` files after every build. Without it, Mixin's runtime transformer
-  rejects those 13 classes ("Super class X of Mixin was not found in the hierarchy of
-  target class X") and nothing that depends on them — including the whole click-gui menu
-  — ever loads.
-- **Discord verification (`DiscordAuthManager`) is a feature added during
-  reconstruction**, not something recovered from the original. On first launch it opens
-  a browser to a Discord OAuth2 page (implicit grant — no client secret ships in the
-  jar), waits for you to approve, fetches your Discord username + avatar via a local
-  callback server, caches them, and applies your avatar/name in the client's diagnostics
-  panel. It also opens an invite to a specific Discord server as part of that same
-  one-time flow. This is a *hard requirement* — if it's never completed, the game
-  terminates rather than continuing unverified. If you fork this for your own use, you'll
-  need to swap in your own Discord Application Client ID (`DiscordAuthManager.java`,
-  `CLIENT_ID`) and register `http://localhost:47113/callback` as an OAuth2 redirect URI
-  in Discord's Developer Portal for it to work at all.
-- `fabric.mod.json`'s entrypoint originally pointed at `ru.metaculture.protection.NVnVnNnN`
-  (the obfuscated name from the shipped jar); the class was renamed to `WildClient`
-  during reconstruction but the manifest wasn't updated to match, so Fabric Loader never
-  actually called into the mod. Fixed.
-- This repo has no Gradle/Loom dev environment (no `run-client` task) — `build.py` only
-  compiles the source and packages a droppable mod jar.
+MCEF, the in-game browser library Wild uses, has no official build for 1.21.8. So
+`lib/` has a compile-only stub covering just enough of its API for things to build.
+`BrowserOverlayRenderer` will compile and load without complaint, but the actual embedded
+browser won't render anything until MCEF itself catches up to this Minecraft version.
+
+Thirteen of Wild's mixin classes extend their own `@Mixin` target — a real, intentional
+Mixin pattern used to get typed access to protected members. Normally Mixin's annotation
+processor rewrites that superclass to `java.lang.Object` at compile time, but this build
+runs with `-proc:none` (no annotation processing), so it never happens automatically.
+`patch_mixin_super.py` does that same rewrite directly on the compiled `.class` files
+after the fact. Skip it and Mixin's runtime transformer refuses to load those 13 classes
+at all — which, since half of Wild's UI depends on them, means no click-gui menu.
+
+The Discord verification thing (`DiscordAuthManager`) isn't something that was recovered
+from anywhere — it got added during this reconstruction. On first launch it opens a
+Discord OAuth2 page in your browser (implicit grant, so no client secret has to live in
+the jar), waits for you to approve it, pulls your username and avatar back through a
+local callback server, caches both, and uses them in the client's diagnostics panel. It
+also opens an invite to a specific Discord server as part of that same flow. None of this
+is optional — if you don't finish it, the game closes instead of continuing unverified.
+If you're forking this for yourself, you'll need to swap in your own Discord Application
+Client ID (`DiscordAuthManager.java`, the `CLIENT_ID` constant) and register
+`http://localhost:47113/callback` as a redirect URI in Discord's developer portal, or
+none of this will work.
+
+`fabric.mod.json` used to point its entrypoint at `ru.metaculture.protection.NVnVnNnN` —
+the obfuscated class name from the original jar. That class got renamed to `WildClient`
+at some point during reconstruction, but nobody updated the manifest to match, so Fabric
+Loader was silently never calling into the mod at all. Fixed now.
+
+There's no Gradle/Loom setup here, so no `run-client` task or dev environment — this just
+compiles the source and spits out a jar you can drop into a real client.
 
 ## Credits
 
