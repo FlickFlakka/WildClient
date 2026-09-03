@@ -1,0 +1,10 @@
+/*
+ * Decompiled with CFR 0.152.
+ */
+package ru.metaculture.protection;
+
+@FunctionalInterface
+public interface Interpolator {
+    public double ease(double var1);
+}
+

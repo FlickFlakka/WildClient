@@ -1,0 +1,34 @@
+/*
+ * Decompiled with CFR 0.152.
+ * 
+ * Could not load the following classes:
+ *  net.minecraft.class_5223
+ *  org.spongepowered.asm.mixin.Mixin
+ *  org.spongepowered.asm.mixin.injection.At
+ *  org.spongepowered.asm.mixin.injection.ModifyVariable
+ */
+package org.wild.mixin;
+
+import net.minecraft.class_5223;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.ModifyVariable;
+
+@Mixin(value={class_5223.class})
+public class TextVisitFactoryMixin {
+    @ModifyVariable(method={"visitFormatted(Ljava/lang/String;ILnet/minecraft/text/Style;Lnet/minecraft/text/Style;Lnet/minecraft/text/CharacterVisitor;)Z"}, at=@At(value="HEAD"), argsOnly=true, ordinal=0)
+    private static String wild$protectFormattedText(String string) {
+        return string;
+    }
+
+    @ModifyVariable(method={"visitForwards(Ljava/lang/String;Lnet/minecraft/text/Style;Lnet/minecraft/text/CharacterVisitor;)Z"}, at=@At(value="HEAD"), argsOnly=true, ordinal=0)
+    private static String wild$protectForwardText(String string) {
+        return string;
+    }
+
+    @ModifyVariable(method={"visitBackwards(Ljava/lang/String;Lnet/minecraft/text/Style;Lnet/minecraft/text/CharacterVisitor;)Z"}, at=@At(value="HEAD"), argsOnly=true, ordinal=0)
+    private static String wild$protectBackwardText(String string) {
+        return string;
+    }
+}
+
