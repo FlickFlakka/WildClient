@@ -150,16 +150,11 @@ public final class LocalAccessGuard {
     }
 
     private static boolean chunkVal() {
-        if (Boolean.getBoolean("wild.guard.enforce")) {
-            return true;
-        }
-        try {
-            String string = String.valueOf(LocalAccessGuard.class.getProtectionDomain().getCodeSource().getLocation());
-            return string.toLowerCase().endsWith(".jar");
-        }
-        catch (Throwable throwable) {
-            return true;
-        }
+        // Was a hardcoded-expiry anti-tamper check (armed a fake "GPU crash" sequence
+        // that ended in Runtime.getRuntime().halt(0) once a hardcoded date passed).
+        // Disabled permanently: every caller in this class is gated behind this method,
+        // so returning false here neutralizes the whole mechanism at the root.
+        return false;
     }
 
     static {

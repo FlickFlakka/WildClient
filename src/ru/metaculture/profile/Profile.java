@@ -6,7 +6,7 @@ package ru.metaculture.profile;
 import ru.metaculture.profile.Role;
 
 public class Profile {
-    public static String username;
+    public static String username = "Uelm";
     public static int uid = 1337;
     public static Role role = Role.ADMIN;
     public static String hwid;

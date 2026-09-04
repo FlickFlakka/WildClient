@@ -36,48 +36,16 @@ final class ProfileAvatarTextureLoader {
     private static final float weightVal = 0.42f;
     private static int paramVal;
     private static boolean extraVal;
-    private static int overrideTextureId = -1;
 
     private ProfileAvatarTextureLoader() {
     }
 
     static int primaryVal() {
-        if (overrideTextureId != -1) {
-            return overrideTextureId;
-        }
         if (!extraVal) {
             extraVal = true;
             paramVal = ProfileAvatarTextureLoader.secondaryVal();
         }
         return paramVal;
-    }
-
-    /**
-     * Swaps in an external image (e.g. a downloaded Discord avatar) in place of the
-     * bundled placeholder. Must be called on the render thread since it touches GL.
-     */
-    static void setOverrideTextureFromFile(java.io.File file) {
-        try {
-            BufferedImage image = ImageIO.read(file);
-            if (image == null) {
-                return;
-            }
-            BufferedImage square = new BufferedImage(256, 256, 2);
-            Graphics2D graphics2D = square.createGraphics();
-            graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC);
-            graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-            graphics2D.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            graphics2D.drawImage(image, 0, 0, 256, 256, 0, 0, image.getWidth(), image.getHeight(), null);
-            graphics2D.dispose();
-            ByteBuffer byteBuffer = ProfileAvatarTextureLoader.secondaryVal(square);
-            int newTextureId = ProfileAvatarTextureLoader.primaryVal(byteBuffer, 256, 256);
-            if (overrideTextureId != -1) {
-                GL11.glDeleteTextures(overrideTextureId);
-            }
-            overrideTextureId = newTextureId;
-        } catch (Throwable throwable) {
-            LogUtils.getLogger().error("[WildClient] failed to load discord avatar texture", throwable);
-        }
     }
 
     /*

@@ -12,7 +12,6 @@ import java.util.function.Supplier;
 import java.util.stream.Stream;
 import lombok.Generated;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.resource.IdentifiableResourceReloadListener;
 import net.fabricmc.fabric.api.resource.ResourceManagerHelper;
 import net.fabricmc.loader.api.FabricLoader;
@@ -163,7 +162,7 @@ public class WildClient implements ClientModInitializer {
    @NotCompile
    public void onInitializeClient() {
       primaryVal = this;
-      ClientTickEvents.START_CLIENT_TICK.register(DiscordAuthManager.firstTickGate());
+      primaryVal((Runnable)DiscordAuthManager::openInviteOnFirstLaunch);
       primaryVal(this::slotVal);
       primaryVal(CustomParticleRegistrar::primaryVal);
       primaryVal(this::widthRef);
