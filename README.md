@@ -1,4 +1,5 @@
 # Wild: reconstructed client source
+Wild is a Fabric client mod for Minecraft 1.21.8. This repo is a working reconstruction of its source, rebuilt from the obfuscated bytecode it shipped as there's no original human-written source floating around anywhere, so this is about as close as it gets. It compiles, packages into a real mod jar, and runs.
 
 So the Wild devs ran their jar through an obfuscator, scrambled every field and method
 name into garbage like `UuUVuuUu` and `C00OOC00oO`, and presumably called it a day:
